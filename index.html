@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>🎉 Surprise! Happy Birthday AAATTHHUULLLLLLLL 🎂</title>
+  <title>🎉 Surprise! Happy Birthday ATUL ANNEPU 🎂</title>
   <style>
     :root {
       --bg: #0b1020;
@@ -34,6 +34,12 @@
       font-size: 1.3em;
       margin-top: 20px;
       opacity: 0.9;
+    }
+    .date {
+      margin-top: 10px;
+      font-size: 1.1em;
+      color: #ffd166;
+      text-shadow: 0 0 10px #ff007f;
     }
     .balloon {
       position: absolute;
@@ -70,17 +76,42 @@
       position: relative;
       z-index: 10;
       animation: fadeIn 2s ease forwards;
+      display: none;
     }
     @keyframes fadeIn {
       from {opacity: 0; transform: translateY(20px);}
       to {opacity: 1; transform: translateY(0);}
     }
+    #surpriseBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      font-size: 1.5em;
+      border: none;
+      border-radius: 15px;
+      background: linear-gradient(90deg, #ff007f, #ffd166);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.6);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    #surpriseBtn:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      box-shadow: 0 0 35px rgba(255, 255, 255, 0.8);
+    }
   </style>
 </head>
 <body>
   <canvas id="confetti"></canvas>
-  <div class="content">
+  <button id="surpriseBtn">🎁 Tap for a Surprise 🎁</button>
+  <audio id="song" loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mp3">
+  </audio>
+  <div class="content" id="content">
     <h1>🎉 Happy Birthday AAATTHHUULLLLLLLL 🎉</h1>
+    <div class="date" id="todayDate"></div>
     <h2>Specially Made For You 💝</h2>
     <p>From your dear friend <strong>ASHISH</strong> — with love, laughter, and the best wishes you’ll remember for a lifetime!<br>
     May your days shine brighter than these lights and your heart stay as joyful as this moment.</p>
@@ -88,7 +119,6 @@
   <div class="footer">Best Wishes Always — ASHISH 💫</div>
 
   <script>
-    // Confetti animation
     const canvas = document.getElementById('confetti');
     const ctx = canvas.getContext('2d');
     let confetti = [];
@@ -133,7 +163,6 @@
     }
     update();
 
-    // Floating balloons
     function createBalloon() {
       const balloon = document.createElement('div');
       balloon.classList.add('balloon');
@@ -142,7 +171,23 @@
       document.body.appendChild(balloon);
       setTimeout(() => balloon.remove(), 8000);
     }
-    setInterval(createBalloon, 600);
+
+    // Surprise button logic
+    const surpriseBtn = document.getElementById('surpriseBtn');
+    const content = document.getElementById('content');
+    const song = document.getElementById('song');
+
+    surpriseBtn.addEventListener('click', () => {
+      surpriseBtn.style.display = 'none';
+      content.style.display = 'block';
+      song.play();
+      setInterval(createBalloon, 600);
+    });
+
+    // Display today's date
+    const today = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('todayDate').textContent = `Date: ${today.toLocaleDateString('en-US', options)}`;
   </script>
 </body>
 </html>
