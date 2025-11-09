@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🎉 Surprise! Happy Birthday</title>
+  <style>
+    :root{--bg:#0b1020;--accent:#ff007f;--accent2:#ffd166;--glass:rgba(255,255,255,0.06)}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#071025 0%,#08132a 50%, #0b0816 100%);color:white;overflow:hidden;display:flex;align-items:center;justify-content:center}
+
+    .stage{width:100%;max-width:1100px;padding:28px;box-sizing:border-box;position:relative}
+    .card{background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));border-radius:18px;padding:28px;backdrop-filter: blur(6px);box-shadow: 0 10px 40px rgba(2,6,23,0.6);border:1px solid var(--glass)}
+
+    header{display:flex;align-items:center;gap:18px}
+    .cake{width:120px;height:120px;border-radius:18px;background:linear-gradient(180deg,#ffd9e8,#ffb3d1);display:flex;align-items:center;justify-content:center;box-shadow: inset 0 -10px 30px rgba(0,0,0,0.08)}
+    .cake .candles{width:68px;height:36px;background:linear-gradient(180deg,#fff5,#ffe);border-radius:8px;position:relative}
+    h1{font-size:34px;margin:0;line-height:1}
+    p.lead{opacity:0.9;margin-top:6px}
+
+    .controls{position:absolute;right:30px;top:28px}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit;padding:8px 12px;border-radius:10px;cursor:pointer}
+
+    .message{margin-top:22px;padding:18px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));font-size:20px}
+
+    .typed{display:inline-block;color:var(--accent2);font-weight:700}
+
+    /* balloons */
+    .balloon{position:absolute;left:50%;transform:translateX(-50%);bottom:-200px;width:80px;height:110px;border-radius:50% 50% 45% 45%;background:linear-gradient(180deg,#ff6b6b,#ffb86b);box-shadow:0 12px 30px rgba(0,0,0,0.25);opacity:0;}
+
+    footer{margin-top:14px;display:flex;gap:12px;align-items:center}
+
+    /* surprise modal */
+    .modal{position:fixed;inset:0;background:linear-gradient(180deg, rgba(3,6,15,0.5), rgba(3,6,15,0.8));display:flex;align-items:center;justify-content:center;visibility:hidden;opacity:0;transition:all .3s}
+    .modal.open{visibility:visible;opacity:1}
+    .modal .sheet{background:linear-gradient(180deg,#0b1220,#071029);padding:28px;border-radius:16px;max-width:720px;text-align:center;border:1px solid rgba(255,255,255,0.04)}
+
+    /* small */
+    @media (max-width:600px){.card{padding:18px}h1{font-size:26px}.cake{width:88px;height:88px}}
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card" id="card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;gap:16px;align-items:center">
+          <div class="cake" id="cake" aria-hidden="true">
+            <div class="candles"></div>
+          </div>
+          <div>
+            <h1 id="title">A Surprise For <span id="name">Friend</span> 🎂</h1>
+            <p class="lead">This page will deliver a little delightful chaos — confetti, balloons, music and a secret message.</p>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="surpriseBtn">Start Surprise</button>
+          <button id="editBtn">Edit Name</button>
+        </div>
+      </div>
+
+      <div class="message">
+        <span style="opacity:0.85">To make it really personal, set the name. Then press </span><strong>Start Surprise</strong>.<br>
+        <div style="margin-top:8px">Message preview: <span class="typed" id="typedPreview">Happy Birthday!</span></div>
+        <div style="margin-top:10px;font-size:14px;opacity:0.85">(Tip: Use the edit button to change the name and message.)</div>
+      </div>
+
+      <footer>
+        <small style="opacity:0.8">Made with a touch of chaos. Press "Full Screen" in your browser for maximum effect.</small>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button id="fullscreenBtn">Full Screen</button>
+          <button id="downloadBtn">Save as Image</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="sheet">
+      <h2 id="modalTitle">Happy Birthday!</h2>
+      <p id="modalMessage">Here's to you — more cake, more chaos, less adulting.</p>
+      <div style="margin-top:18px;font-size:13px;opacity:0.9">Click anywhere or press <kbd>Esc</kbd> to close.</div>
+    </div>
+  </div>
+
+  <canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none"></canvas>
+  <canvas id="fireworks" style="position:fixed;inset:0;pointer-events:none"></canvas>
+
+  <script>
+    // ====== Configuration ======
+    const defaultName = 'Friend';
+    const defaultMessage = 'Wishing you a day full of cake, laughter and brilliant surprises.';
+
+    // ====== Small helper: typed effect ======
+    function typeText(el, text, speed=40){
+      el.textContent='';
+      let i=0; const t=setInterval(()=>{
+        el.textContent += text[i++] || '';
+        if(i>text.length) clearInterval(t);
+      }, speed);
+    }
+
+    // ====== UI wiring ======
+    const nameEl = document.getElementById('name');
+    const typedPreview = document.getElementById('typedPreview');
+    const title = document.getElementById('title');
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+
+    // load from localStorage
+    const stored = JSON.parse(localStorage.getItem('hb_data')||'{}');
+    const personName = stored.name || defaultName;
+    const messageText = stored.message || defaultMessage;
+    nameEl.textContent = personName;
+    typedPreview.textContent = messageText;
+
+    document.getElementById('editBtn').addEventListener('click', ()=>{
+      const nm = prompt('Who is this for?', personName) || personName;
+      const msg = prompt('Short message (e.g. "You rock!")', messageText) || messageText;
+      localStorage.setItem('hb_data', JSON.stringify({name:nm, message:msg}));
+      nameEl.textContent = nm;
+      typedPreview.textContent = msg;
+      title.scrollIntoView({behavior:'smooth'});
+    });
+
+    // Fullscreen
+    document.getElementById('fullscreenBtn').addEventListener('click', ()=>{
+      const el = document.documentElement;
+      if(!document.fullscreenElement) el.requestFullscreen?.(); else document.exitFullscreen?.();
+    });
+
+    // download as image
+    document.getElementById('downloadBtn').addEventListener('click', ()=>{
+      html2canvas(document.querySelector('.card')).then(canvas=>{
+        const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='happy-birthday.png';a.click();
+      });
+    });
+
+    // Surprise action
+    document.getElementById('surpriseBtn').addEventListener('click', startSurprise);
+
+    function startSurprise(){
+      // set title + modal text
+      const s = JSON.parse(localStorage.getItem('hb_data')||'{}');
+      const nm = (s.name||defaultName);
+      const msg = (s.message||defaultMessage);
+      nameEl.textContent = nm;
+      title.innerHTML = `Surprise for <span style="color:var(--accent)">${nm}</span> 🎉`;
+      modalTitle.textContent = `Happy Birthday, ${nm}!`;
+      modalMessage.textContent = msg;
+
+      // typed reveal
+      typeText(document.getElementById('typedPreview'), `Happy Birthday ${nm}! ${msg}`, 28);
+
+      // visual effects
+      launchBalloons();
+      runConfetti();
+      runFireworks();
+      playMelody();
+
+      // open modal
+      setTimeout(()=> modal.classList.add('open'), 800);
+    }
+
+    modal.addEventListener('click', ()=> modal.classList.remove('open'));
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape') modal.classList.remove('open') });
+
+    // ====== Balloons ======
+    function launchBalloons(){
+      const colors = ['linear-gradient(180deg,#ff6b6b,#ffb86b)','linear-gradient(180deg,#6bafff,#6bd1ff)','linear-gradient(180deg,#b86bff,#ff88e1)'];
+      for(let i=0;i<10;i++){
+        const b = document.createElement('div');b.className='balloon';
+        b.style.left = (10 + Math.random()*80)+'%';
+        b.style.background = colors[i%colors.length];
+        b.style.width = (60 + Math.random()*60)+'px';
+        b.style.height = (80 + Math.random()*90)+'px';
+        document.body.appendChild(b);
+        // animate
+        const delay = Math.random()*600;
+        b.animate([
+          {transform:'translateY(0) translateX(0)', opacity:0},
+          {transform:`translateY(-120vh) translateX(${(Math.random()-0.5)*20}vw)`, opacity:1}
+        ],{duration:3000 + Math.random()*4000, delay, easing:'cubic-bezier(.2,.8,.2,1)'}).onfinish = ()=> b.remove();
+      }
+    }
+
+    // ====== Confetti (canvas) ======
+    function runConfetti(){
+      const c = document.getElementById('confettiCanvas');
+      c.width = innerWidth; c.height = innerHeight;
+      const ctx = c.getContext('2d');
+      const pieces = [];
+      const colors = ['#ff6b6b','#ffd166','#6bffb3','#6bafff','#d06bff'];
+      for(let i=0;i<160;i++) pieces.push({x:Math.random()*c.width,y:Math.random()*-c.height,vy:2+Math.random()*6, vx:(Math.random()-0.5)*2, r:2+Math.random()*6,color:colors[i%colors.length], rot:Math.random()*360});
+      let t=0; function frame(){ ctx.clearRect(0,0,c.width,c.height); t+=1; for(const p of pieces){ p.y += p.vy; p.x += p.vx + Math.sin((p.y+t)/30)*0.6; p.rot += p.vx*2; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180); ctx.fillStyle = p.color; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.8); ctx.restore(); }
+        // keep loop for a while
+        if(t<300) requestAnimationFrame(frame); else ctx.clearRect(0,0,c.width,c.height);
+      }
+      frame();
+    }
+
+    // ====== Fireworks (simple particles) ======
+    function runFireworks(){
+      const c = document.getElementById('fireworks'); c.width = innerWidth; c.height = innerHeight; const ctx = c.getContext('2d');
+      const bursts = [];
+      function spawn(){
+        const x = Math.random()*c.width*0.9 + c.width*0.05; const y = Math.random()*c.height*0.5 + 60;
+        const count = 40 + Math.floor(Math.random()*40); const color = `hsl(${Math.random()*360},100%,60%)`;
+        const parts = [];
+        for(let i=0;i<count;i++) parts.push({x,y,ax:(Math.cos(i/count*Math.PI*2)+Math.random()*0.2)*6, ay:(Math.sin(i/count*Math.PI*2)+Math.random()*0.2)*6, life:40+Math.random()*60,color});
+        bursts.push({parts});
+      }
+      let tick=0; function draw(){ ctx.clearRect(0,0,c.width,c.height); tick++; if(Math.random()<0.05) spawn(); for(let b of bursts){ for(let p of b.parts){ p.x += p.ax; p.y += p.ay; p.ay += 0.12; p.life--; ctx.globalAlpha = Math.max(0, p.life/80); ctx.fillStyle = p.color; ctx.fillRect(p.x,p.y,2,2); } } requestAnimationFrame(draw); }
+      draw();
+      // stop after some time
+      setTimeout(()=>{/* allow to fade */}, 10000);
+    }
+
+    // ====== Tiny melody using WebAudio ======
+    function playMelody(){
+      try{
+        const AudioCtx = window.AudioContext || window.webkitAudioContext; const ctx = new AudioCtx();
+        const notes = [523.25,659.25,783.99,523.25,783.99,659.25,523.25]; // small sequence
+        let t=0; for(let i=0;i<notes.length;i++){
+          const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value = notes[i]; o.connect(g); g.connect(ctx.destination); g.gain.value = 0.0001; const start = ctx.currentTime + t; const dur = 0.26; o.start(start); g.gain.linearRampToValueAtTime(0.12,start+0.01); g.gain.linearRampToValueAtTime(0.0001,start+dur); o.stop(start+dur+0.02); t += dur;
+        }
+      }catch(e){console.warn('Audio failed',e)}
+    }
+
+    // ====== html2canvas tiny embed (for download) ======
+    // Minimal embedded html2canvas implementation (slim) — fallback to basic screenshot approach
+    // We will load a tiny blob of html2canvas from a CDN if available — otherwise the download button will be disabled.
+    (function loadCanvasLib(){
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.onload = ()=> console.log('html2canvas loaded');
+      s.onerror = ()=>{document.getElementById('downloadBtn').disabled=true; document.getElementById('downloadBtn').title='Download needs internet to load helper library.'}
+      document.body.appendChild(s);
+    })();
+
+    // Small UX: auto-start if user arrived from a share param
+    const params = new URLSearchParams(location.search);
+    if(params.get('auto')==='1') setTimeout(startSurprise, 800);
+
+    // Resize canvases on resize
+    window.addEventListener('resize', ()=>{ document.getElementById('confettiCanvas').width = innerWidth; document.getElementById('confettiCanvas').height = innerHeight; document.getElementById('fireworks').width = innerWidth; document.getElementById('fireworks').height = innerHeight; });
+
+    // expose helper for debugging
+    window.hb = {startSurprise, typeText};
+  </script>
+</body>
+</html>
